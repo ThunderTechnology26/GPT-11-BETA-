@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 (Browser Clone)</title>
+<style>
+:root {
+  --bg: #0f172a;
+  --taskbar: rgba(30,41,59,0.85);
+  --accent: #3b82f6;
+  --window: #f8fafc;
+  --shadow: 0 20px 40px rgba(0,0,0,.35);
+  --radius: 12px;
+  --font: "Segoe UI", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+body {
+  background: linear-gradient(120deg, #0f172a, #020617);
+}
+
+/* Desktop */
+#desktop {
+  position: absolute;
+  inset: 0;
+}
+
+/* Taskbar */
+#taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--taskbar);
+  backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 -2px 10px rgba(0,0,0,.4);
+}
+
+.taskbar-icons {
+  display: flex;
+  gap: 12px;
+}
+
+.taskbar-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.taskbar-button:hover {
+  background: rgba(255,255,255,.15);
+}
+
+/* Start Menu */
+#startMenu {
+  position: absolute;
+  bottom: 60px;
+  width: 420px;
+  height: 480px;
+  background: rgba(248,250,252,.95);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: none;
+  padding: 16px;
+}
+
+#startMenu h3 {
+  margin: 0 0 12px;
+}
+
+/* Window */
+.window {
+  position: absolute;
+  top: 120px;
+  left: 120px;
+  width: 420px;
+  height: 300px;
+  background: var(--window);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.titlebar {
+  height: 36px;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  cursor: move;
+  font-weight: 600;
+}
+
+.window-content {
+  padding: 10px;
+  height: calc(100% - 36px);
+}
+
+textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  border: none;
+  outline: none;
+  font-family: Consolas, monospace;
+}
+</style>
+</head>
+<body>
+
+<div id="desktop"></div>
+
+<div id="startMenu">
+  <h3>Pinned</h3>
+  <button onclick="openNotepad()">📝 Notepad</button>
+</div>
+
+<div id="taskbar">
+  <div class="taskbar-icons">
+    <div class="taskbar-button" onclick="toggleStart()">⊞</div>
+    <div class="taskbar-button" onclick="openNotepad()">📝</div>
+  </div>
+</div>
+
+<script>
+let startOpen = false;
+let z = 10;
+
+function toggleStart() {
+  startOpen = !startOpen;
+  document.getElementById("startMenu").style.display =
+    startOpen ? "block" : "none";
+}
+
+function openNotepad() {
+  const win = document.createElement("div");
+  win.className = "window";
+  win.style.zIndex = ++z;
+
+  win.innerHTML = `
+    <div class="titlebar">Notepad</div>
+    <div class="window-content">
+      <textarea>Welcome to Windows 11 (browser clone).</textarea>
+    </div>
+  `;
+
+  document.getElementById("desktop").appendChild(win);
+
+  drag(win);
+}
+
+function drag(win) {
+  const bar = win.querySelector(".titlebar");
+  let ox, oy;
+
+  bar.onmousedown = e => {
+    ox = e.clientX - win.offsetLeft;
+    oy = e.clientY - win.offsetTop;
+    win.style.zIndex = ++z;
+
+    document.onmousemove = e => {
+      win.style.left = e.clientX - ox + "px";
+      win.style.top = e.clientY - oy + "px";
+    };
+
+    document.onmouseup = () => {
+      document.onmousemove = null;
+    };
+  };
+}
+</script>
+
+</body>
+</html>
