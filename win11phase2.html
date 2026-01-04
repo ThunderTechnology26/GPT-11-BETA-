@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 (Browser Clone)</title>
+
+<style>
+:root {
+  --bg-dark: linear-gradient(120deg,#020617,#0f172a);
+  --bg-light: linear-gradient(120deg,#e5e7eb,#f8fafc);
+  --task-dark: rgba(30,41,59,.85);
+  --task-light: rgba(255,255,255,.85);
+  --window-dark: #020617;
+  --window-light: #ffffff;
+  --text-dark: #e5e7eb;
+  --text-light: #020617;
+  --radius: 12px;
+  --shadow: 0 20px 40px rgba(0,0,0,.35);
+  --font: "Segoe UI", system-ui, sans-serif;
+}
+
+body.dark {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+body.light {
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+
+* { box-sizing: border-box; }
+html, body { margin:0; width:100%; height:100%; font-family:var(--font); overflow:hidden; }
+
+#desktop { position:absolute; inset:0; }
+
+/* Taskbar */
+#taskbar {
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  height:48px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 12px;
+  backdrop-filter: blur(20px);
+}
+body.dark #taskbar { background:var(--task-dark); }
+body.light #taskbar { background:var(--task-light); }
+
+.taskbar-center { display:flex; gap:10px; margin:auto; }
+.taskbar-btn {
+  width:36px;
+  height:36px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+.taskbar-btn:hover { background:rgba(0,0,0,.15); }
+
+#clock { font-size:13px; }
+
+/* Start Menu */
+#startMenu {
+  position:absolute;
+  bottom:60px;
+  width:360px;
+  height:420px;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:none;
+}
+body.dark #startMenu { background:#020617; }
+body.light #startMenu { background:#ffffff; }
+
+button {
+  width:100%;
+  padding:8px;
+  margin-bottom:6px;
+  cursor:pointer;
+}
+
+/* Windows */
+.window {
+  position:absolute;
+  width:420px;
+  height:300px;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+body.dark .window { background:var(--window-dark); color:var(--text-dark); }
+body.light .window { background:var(--window-light); color:var(--text-light); }
+
+.titlebar {
+  height:34px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 8px;
+  cursor:move;
+  background:rgba(0,0,0,.1);
+}
+.controls span {
+  margin-left:8px;
+  cursor:pointer;
+}
+.window-content { padding:10px; height:calc(100% - 34px); }
+
+textarea {
+  width:100%;
+  height:100%;
+  border:none;
+  outline:none;
+  resize:none;
+}
+</style>
+</head>
+
+<body class="dark">
+
+<div id="desktop"></div>
+
+<div id="startMenu">
+  <button onclick="openNotepad()">📝 Notepad</button>
+  <button onclick="openSettings()">⚙️ Settings</button>
+</div>
+
+<div id="taskbar">
+  <div class="taskbar-center">
+    <div class="taskbar-btn" onclick="toggleStart()">⊞</div>
+    <div class="taskbar-btn" onclick="openNotepad()">📝</div>
+    <div class="taskbar-btn" onclick="openSettings()">⚙️</div>
+  </div>
+  <div id="clock"></div>
+</div>
+
+<script>
+let z = 10;
+let startOpen = false;
+
+function toggleStart() {
+  startOpen = !startOpen;
+  startMenu.style.display = startOpen ? "block" : "none";
+}
+
+function makeWindow(title, content) {
+  const w = document.createElement("div");
+  w.className = "window";
+  w.style.top = "120px";
+  w.style.left = "120px";
+  w.style.zIndex = ++z;
+
+  w.innerHTML = `
+    <div class="titlebar">
+      <span>${title}</span>
+      <div class="controls">
+        <span onclick="minimize(this)">—</span>
+        <span onclick="maximize(this)">□</span>
+        <span onclick="closeWin(this)">✕</span>
+      </div>
+    </div>
+    <div class="window-content">${content}</div>
+  `;
+  desktop.appendChild(w);
+  drag(w);
+}
+
+function openNotepad() {
+  makeWindow("Notepad", `<textarea>Hello from Windows 11 clone.</textarea>`);
+}
+
+function openSettings() {
+  makeWindow("Settings", `
+    <button onclick="setTheme('dark')">Dark Mode</button>
+    <button onclick="setTheme('light')">Light Mode</button>
+  `);
+}
+
+function closeWin(btn) {
+  btn.closest(".window").remove();
+}
+
+function minimize(btn) {
+  btn.closest(".window").style.display = "none";
+}
+
+function maximize(btn) {
+  const w = btn.closest(".window");
+  if (!w.dataset.max) {
+    w.dataset.max = "1";
+    w.dataset.old = w.style.cssText;
+    w.style.top = "0";
+    w.style.left = "0";
+    w.style.width = "100%";
+    w.style.height = "calc(100% - 48px)";
+  } else {
+    w.style.cssText = w.dataset.old;
+    delete w.dataset.max;
+  }
+}
+
+function drag(w) {
+  const bar = w.querySelector(".titlebar");
+  let ox, oy;
+  bar.onmousedown = e => {
+    ox = e.clientX - w.offsetLeft;
+    oy = e.clientY - w.offsetTop;
+    w.style.zIndex = ++z;
+    document.onmousemove = e => {
+      w.style.left = e.clientX - ox + "px";
+      w.style.top = e.clientY - oy + "px";
+    };
+    document.onmouseup = () => document.onmousemove = null;
+  };
+}
+
+function setTheme(t) {
+  document.body.className = t;
+}
+
+function updateClock() {
+  const d = new Date();
+  clock.textContent = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+const desktop = document.getElementById("desktop");
+const startMenu = document.getElementById("startMenu");
+const clock = document.getElementById("clock");
+
+</body>
+</html>

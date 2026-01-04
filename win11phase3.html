@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 (Browser Clone)</title>
+
+<style>
+:root {
+  --radius: 12px;
+  --shadow: 0 20px 40px rgba(0,0,0,.35);
+  --font: "Segoe UI", system-ui, sans-serif;
+
+  /* Dark mode */
+  --bg-dark: radial-gradient(circle at top, #1e293b, #020617);
+  --task-dark: rgba(30,41,59,.85);
+  --window-dark: #020617;
+  --text-dark: #e5e7eb;
+
+  /* Light mode (darker + softer) */
+  --bg-light: radial-gradient(circle at top, #cbd5e1, #e5e7eb);
+  --task-light: rgba(241,245,249,.85);
+  --window-light: #f1f5f9;
+  --text-light: #020617;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+body.dark {
+  background: var(--bg-dark);
+  color: var(--text-dark);
+}
+body.light {
+  background: var(--bg-light);
+  color: var(--text-light);
+}
+
+#desktop { position:absolute; inset:0; }
+
+/* Taskbar */
+#taskbar {
+  position:absolute;
+  bottom:0;
+  left:0;
+  right:0;
+  height:48px;
+  display:flex;
+  align-items:center;
+  padding:0 10px;
+  backdrop-filter: blur(20px);
+}
+body.dark #taskbar { background:var(--task-dark); }
+body.light #taskbar { background:var(--task-light); }
+
+.taskbar-center {
+  display:flex;
+  gap:8px;
+  margin:auto;
+}
+.taskbar-btn {
+  width:36px;
+  height:36px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+.taskbar-btn.running {
+  background: rgba(59,130,246,.35);
+}
+.taskbar-btn:hover {
+  background: rgba(0,0,0,.15);
+}
+
+#clock {
+  font-size:13px;
+  margin-left:auto;
+}
+
+/* Start Menu */
+#startMenu {
+  position:absolute;
+  bottom:60px;
+  width:360px;
+  height:420px;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+  display:none;
+}
+body.dark #startMenu { background:#020617; }
+body.light #startMenu { background:#f1f5f9; }
+
+button {
+  width:100%;
+  padding:8px;
+  margin-bottom:6px;
+  cursor:pointer;
+}
+
+/* Windows */
+.window {
+  position:absolute;
+  width:420px;
+  height:300px;
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+body.dark .window {
+  background:var(--window-dark);
+  color:var(--text-dark);
+}
+body.light .window {
+  background:var(--window-light);
+  color:var(--text-light);
+}
+
+.titlebar {
+  height:34px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0 8px;
+  cursor:move;
+  background:rgba(0,0,0,.12);
+}
+.controls span {
+  margin-left:8px;
+  cursor:pointer;
+}
+.window-content {
+  padding:10px;
+  height:calc(100% - 34px);
+}
+
+textarea {
+  width:100%;
+  height:100%;
+  border:none;
+  outline:none;
+  resize:none;
+}
+</style>
+</head>
+
+<body class="dark">
+
+<div id="desktop"></div>
+
+<div id="startMenu">
+  <button onclick="openNotepad()">📝 Notepad</button>
+  <button onclick="openSettings()">⚙️ Settings</button>
+</div>
+
+<div id="taskbar">
+  <div class="taskbar-center">
+    <div class="taskbar-btn" id="startBtn" onclick="toggleStart()">⊞</div>
+    <div class="taskbar-btn" id="noteBtn" onclick="restore('notepad')">📝</div>
+    <div class="taskbar-btn" id="setBtn" onclick="restore('settings')">⚙️</div>
+  </div>
+  <div id="clock"></div>
+</div>
+
+<script>
+const desktop = document.getElementById("desktop");
+const startMenu = document.getElementById("startMenu");
+const clock = document.getElementById("clock");
+
+let z = 10;
+let startOpen = false;
+const apps = {};
+
+function toggleStart() {
+  startOpen = !startOpen;
+  startMenu.style.display = startOpen ? "block" : "none";
+}
+
+function makeWindow(id, title, content) {
+  if (apps[id]) {
+    restore(id);
+    return;
+  }
+
+  const w = document.createElement("div");
+  w.className = "window";
+  w.style.top = "120px";
+  w.style.left = "120px";
+  w.style.zIndex = ++z;
+
+  w.innerHTML = `
+    <div class="titlebar">
+      <span>${title}</span>
+      <div class="controls">
+        <span onclick="minimize('${id}')">—</span>
+        <span onclick="maximize(this)">□</span>
+        <span onclick="closeWin('${id}')">✕</span>
+      </div>
+    </div>
+    <div class="window-content">${content}</div>
+  `;
+
+  desktop.appendChild(w);
+  drag(w);
+  apps[id] = w;
+  markRunning(id, true);
+}
+
+function openNotepad() {
+  makeWindow("notepad","Notepad",`<textarea>Hello from Windows 11 clone.</textarea>`);
+}
+
+function openSettings() {
+  makeWindow("settings","Settings",`
+    <button onclick="setTheme('dark')">Dark Mode</button>
+    <button onclick="setTheme('light')">Light Mode</button>
+  `);
+}
+
+function closeWin(id) {
+  apps[id].remove();
+  delete apps[id];
+  markRunning(id, false);
+}
+
+function minimize(id) {
+  apps[id].style.display = "none";
+}
+
+function restore(id) {
+  if (!apps[id]) return;
+  apps[id].style.display = "block";
+  apps[id].style.zIndex = ++z;
+}
+
+function maximize(btn) {
+  const w = btn.closest(".window");
+  if (!w.dataset.max) {
+    w.dataset.max = "1";
+    w.dataset.old = w.style.cssText;
+    w.style.top = "0";
+    w.style.left = "0";
+    w.style.width = "100%";
+    w.style.height = "calc(100% - 48px)";
+  } else {
+    w.style.cssText = w.dataset.old;
+    delete w.dataset.max;
+  }
+}
+
+function drag(w) {
+  const bar = w.querySelector(".titlebar");
+  let ox, oy;
+  bar.onmousedown = e => {
+    ox = e.clientX - w.offsetLeft;
+    oy = e.clientY - w.offsetTop;
+    w.style.zIndex = ++z;
+    document.onmousemove = e => {
+      w.style.left = e.clientX - ox + "px";
+      w.style.top = e.clientY - oy + "px";
+    };
+    document.onmouseup = () => document.onmousemove = null;
+  };
+}
+
+function markRunning(id, on) {
+  const btn = document.getElementById(id === "notepad" ? "noteBtn" : "setBtn");
+  btn.classList.toggle("running", on);
+}
+
+function setTheme(t) {
+  document.body.className = t;
+}
+
+function updateClock() {
+  const d = new Date();
+  clock.textContent = d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
+</body>
+</html>
