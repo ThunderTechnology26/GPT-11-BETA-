@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 – Browser Edition</title>
+<style>
+:root {
+  --bg: #0b1220;
+  --panel: #111827;
+  --window: #1f2933;
+  --text: #e5e7eb;
+  --accent: #3b82f6;
+}
+
+body.light {
+  --bg: #dbeafe;
+  --panel: #e5e7eb;
+  --window: #ffffff;
+  --text: #111827;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: radial-gradient(circle at top, #1e3a8a, var(--bg));
+  color: var(--text);
+  overflow: hidden;
+}
+
+#desktop {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+}
+
+.icon {
+  width: 80px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.icon img {
+  width: 48px;
+}
+
+#taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 52px;
+  background: rgba(17,24,39,0.9);
+  backdrop-filter: blur(16px);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.taskbtn {
+  width: 32px;
+  height: 32px;
+  background: var(--panel);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+#clock {
+  margin-left: 10px;
+  font-size: 14px;
+}
+
+.window {
+  position: absolute;
+  width: 360px;
+  height: 260px;
+  background: var(--window);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.titlebar {
+  height: 34px;
+  background: var(--panel);
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  cursor: grab;
+}
+
+.controls span {
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.content {
+  flex: 1;
+  padding: 10px;
+  overflow: auto;
+}
+</style>
+</head>
+
+<body>
+<div id="desktop"></div>
+
+<div id="taskbar">
+  <div class="taskbtn" onclick="openExplorer()">📁</div>
+  <div class="taskbtn" onclick="openNotepad()">📝</div>
+  <div class="taskbtn" onclick="openSettings()">⚙️</div>
+  <div id="clock"></div>
+</div>
+
+<script>
+/* ===== SAFE BOOT ===== */
+const $ = id => document.getElementById(id);
+let z = 10;
+
+/* ===== THEME ===== */
+const savedTheme = localStorage.getItem("theme");
+document.body.classList.toggle("light", savedTheme === "light");
+
+/* ===== WINDOW SYSTEM ===== */
+function createWindow(title, bodyHTML) {
+  const win = document.createElement("div");
+  win.className = "window";
+  win.style.top = "80px";
+  win.style.left = "80px";
+  win.style.zIndex = ++z;
+
+  win.innerHTML = `
+    <div class="titlebar">
+      <span>${title}</span>
+      <div class="controls">
+        <span onclick="this.closest('.window').remove()">✖</span>
+      </div>
+    </div>
+    <div class="content">${bodyHTML}</div>
+  `;
+
+  win.onmousedown = () => win.style.zIndex = ++z;
+  $("desktop").appendChild(win);
+}
+
+/* ===== APP BINDINGS (THIS IS THE FIX) ===== */
+window.openNotepad = function () {
+  createWindow("Notepad", `
+    <textarea style="width:100%;height:100%;background:transparent;color:inherit;border:none;outline:none;"></textarea>
+  `);
+};
+
+window.openExplorer = function () {
+  createWindow("File Explorer", `
+    <p>📄 welcome.txt</p>
+    <p>📁 Documents</p>
+    <p>📁 Pictures</p>
+  `);
+};
+
+window.openSettings = function () {
+  createWindow("Settings", `
+    <button onclick="toggleTheme()">Toggle Light / Dark</button>
+  `);
+};
+
+window.toggleTheme = function () {
+  document.body.classList.toggle("light");
+  localStorage.setItem("theme",
+    document.body.classList.contains("light") ? "light" : "dark"
+  );
+};
+
+/* ===== CLOCK ===== */
+function updateClock() {
+  const d = new Date();
+  $("clock").textContent =
+    d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+updateClock();
+setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

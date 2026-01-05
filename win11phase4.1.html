@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 – Browser Edition</title>
+
+<style>
+/* ===== BOOT FAILURE ===== */
+#bootFail {
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: #9ca3af;
+  font-family: Consolas, monospace;
+  padding: 24px;
+  display: none;
+  white-space: pre-wrap;
+  z-index: 9999;
+}
+
+/* ===== THEME ===== */
+:root {
+  --bg: #0b1220;
+  --panel: #111827;
+  --window: #1f2933;
+  --text: #e5e7eb;
+  --accent: #3b82f6;
+  --taskbar-bg: rgba(17,24,39,0.92);
+  --taskbar-text: #e5e7eb;
+}
+
+body.light {
+  --bg: #dbeafe;
+  --panel: #e5e7eb;
+  --window: #ffffff;
+  --text: #111827;
+  --taskbar-bg: rgba(255,255,255,0.92);
+  --taskbar-text: #111827;
+}
+
+/* ===== BASE ===== */
+html, body {
+  margin: 0;
+  height: 100%;
+  background: radial-gradient(circle at top, #1e3a8a, var(--bg));
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ===== DESKTOP ===== */
+#desktop {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+}
+
+/* ===== TASKBAR ===== */
+#taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--taskbar-bg);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 1000;
+  color: var(--taskbar-text);
+}
+
+.taskbtn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+#clock {
+  position: absolute;
+  right: 16px;
+  font-size: 14px;
+}
+
+/* ===== START MENU ===== */
+#startMenu {
+  position: fixed;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 16px;
+  display: none;
+  z-index: 999;
+}
+
+/* ===== WINDOWS ===== */
+.window {
+  position: absolute;
+  width: 360px;
+  height: 260px;
+  background: var(--window);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.titlebar {
+  height: 34px;
+  background: var(--panel);
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  cursor: grab;
+}
+
+.controls span {
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.content {
+  flex: 1;
+  padding: 10px;
+}
+
+/* ===== NOTIFICATIONS ===== */
+#notifications {
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 2000;
+}
+
+.toast {
+  background: var(--panel);
+  padding: 12px 14px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  min-width: 220px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="bootFail"></div>
+<div id="desktop"></div>
+<div id="notifications"></div>
+
+<div id="startMenu"></div>
+
+<div id="taskbar">
+  <div class="taskbtn" onclick="toggleStart()">⊞</div>
+  <div class="taskbtn" onclick="openExplorer()">📁</div>
+  <div class="taskbtn" onclick="openNotepad()">📝</div>
+  <div class="taskbtn" onclick="openSettings()">⚙️</div>
+  <div id="clock"></div>
+</div>
+
+<script>
+/* =====================================================
+   BOOTLOADER
+===================================================== */
+(function boot() {
+  try { startOS(); }
+  catch (err) {
+    const f = document.getElementById("bootFail");
+    f.style.display = "block";
+    f.textContent =
+`Windows 11 Browser Edition failed to start.
+
+${err.name}: ${err.message}
+
+${err.stack}`;
+    throw err;
+  }
+})();
+
+/* =====================================================
+   OS START
+===================================================== */
+function startOS() {
+  const $ = id => document.getElementById(id);
+  let z = 10;
+
+  /* THEME */
+  document.body.classList.toggle("light", localStorage.getItem("theme") === "light");
+
+  /* NOTIFICATIONS */
+  window.notify = function (msg) {
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = msg;
+    $("notifications").appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+  };
+
+  /* WINDOW SYSTEM */
+  window.createWindow = function (title, html) {
+    const win = document.createElement("div");
+    win.className = "window";
+    win.style.top = "90px";
+    win.style.left = "90px";
+    win.style.zIndex = ++z;
+
+    win.innerHTML = `
+      <div class="titlebar">
+        <span>${title}</span>
+        <div class="controls">
+          <span onclick="this.closest('.window').style.display='none'">—</span>
+          <span onclick="maximize(this)">▢</span>
+          <span onclick="this.closest('.window').remove()">✖</span>
+        </div>
+      </div>
+      <div class="content">${html}</div>
+    `;
+
+    win.onmousedown = () => win.style.zIndex = ++z;
+    $("desktop").appendChild(win);
+  };
+
+  window.maximize = btn => {
+    const w = btn.closest(".window");
+    w.style.left = "0";
+    w.style.top = "0";
+    w.style.width = "100%";
+    w.style.height = "calc(100% - 56px)";
+  };
+
+  /* APPS */
+  window.openNotepad = () => {
+    createWindow("Notepad",
+      `<textarea style="width:100%;height:100%"></textarea>`);
+    notify("Notepad opened");
+  };
+
+  window.openExplorer = () => {
+    createWindow("File Explorer", `<p>📄 welcome.txt</p>`);
+    notify("File Explorer opened");
+  };
+
+  window.openSettings = () => {
+    createWindow("Settings",
+      `<button onclick="toggleTheme()">Toggle Theme</button>`);
+  };
+
+  window.toggleTheme = function () {
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme",
+      document.body.classList.contains("light") ? "light" : "dark");
+    notify("Theme changed");
+  };
+
+  /* START MENU */
+  window.toggleStart = () => {
+    $("startMenu").style.display =
+      $("startMenu").style.display === "block" ? "none" : "block";
+  };
+
+  /* CLOCK */
+  function updateClock() {
+    $("clock").textContent =
+      new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  notify("Windows 11 Browser Edition started");
+}
+</script>
+
+</body>
+</html>

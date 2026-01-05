@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Windows 11 – Browser Edition</title>
+
+<style>
+/* ================= BOOT FAILURE ================= */
+#bootFail {
+  position: fixed;
+  inset: 0;
+  background: black;
+  color: #9ca3af;
+  font-family: Consolas, monospace;
+  padding: 24px;
+  white-space: pre-wrap;
+  z-index: 9999;
+  display: none;
+}
+
+/* ================= THEME ================= */
+:root {
+  --bg:#0b1220;
+  --panel:#111827;
+  --window:#1f2933;
+  --text:#e5e7eb;
+  --taskbar-bg:rgba(17,24,39,.92);
+  --taskbar-text:#e5e7eb;
+}
+
+body.light {
+  --bg:#dbeafe;
+  --panel:#e5e7eb;
+  --window:#ffffff;
+  --text:#111827;
+  --taskbar-bg:rgba(255,255,255,.92);
+  --taskbar-text:#111827;
+}
+
+html, body {
+  margin:0;
+  height:100%;
+  background:radial-gradient(circle at top,#1e3a8a,var(--bg));
+  font-family:"Segoe UI",system-ui,sans-serif;
+  color:var(--text);
+  overflow:hidden;
+}
+
+/* ================= SETUP ================= */
+#setup {
+  position:fixed;
+  inset:0;
+  background:linear-gradient(135deg,#0f172a,#1e3a8a);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+
+.setup-box {
+  width:380px;
+  padding:32px;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(30px);
+  border-radius:18px;
+}
+
+.setup-box input {
+  width:100%;
+  padding:10px;
+  margin-top:12px;
+  border:none;
+  border-radius:8px;
+}
+
+.setup-box button {
+  margin-top:18px;
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+/* ================= DESKTOP ================= */
+#desktop {
+  position:absolute;
+  inset:0;
+  padding:16px;
+  display:none;
+}
+
+/* ================= TASKBAR ================= */
+#taskbar {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:56px;
+  background:var(--taskbar-bg);
+  backdrop-filter:blur(20px);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  color:var(--taskbar-text);
+}
+
+.taskbtn {
+  width:36px;
+  height:36px;
+  background:rgba(255,255,255,.12);
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+
+#clock {
+  position:absolute;
+  right:16px;
+}
+
+/* ================= START MENU ================= */
+#startMenu {
+  position:fixed;
+  bottom:56px;
+  left:50%;
+  transform:translateX(-50%);
+  width:360px;
+  background:var(--panel);
+  border-radius:18px;
+  padding:16px;
+  display:none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="bootFail"></div>
+
+<div id="setup">
+  <div class="setup-box">
+    <h1>Welcome to Windows 11</h1>
+    <p>Let’s set things up.</p>
+    <input id="firstName" placeholder="First name">
+    <input id="lastName" placeholder="Last name">
+    <button onclick="completeSetup()">Continue</button>
+  </div>
+</div>
+
+<div id="desktop"></div>
+<div id="startMenu"></div>
+
+<div id="taskbar">
+  <div class="taskbtn" onclick="toggleStart()">⊞</div>
+  <div class="taskbtn" onclick="openExplorer()">📁</div>
+  <div class="taskbtn" onclick="openNotepad()">📝</div>
+  <div class="taskbtn" onclick="openSettings()">⚙️</div>
+  <div id="clock"></div>
+</div>
+
+<script>
+/* ================= BOOT ================= */
+(function boot(){
+  try {
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      loadDesktop(JSON.parse(saved));
+      document.getElementById("setup").style.display = "none";
+    }
+  } catch (e) {
+    showFail(e);
+  }
+})();
+
+/* ================= SETUP ================= */
+function completeSetup() {
+  const f = firstName.value.trim();
+  const l = lastName.value.trim();
+
+  if (!f || !l) {
+    alert("Please fill in both fields.");
+    return;
+  }
+
+  const user = { first: f, last: l };
+
+  try {
+    localStorage.setItem("user", JSON.stringify(user));
+    document.getElementById("setup").style.display = "none";
+    loadDesktop(user);
+  } catch (e) {
+    showFail(e);
+  }
+}
+
+/* ================= DESKTOP ================= */
+function loadDesktop(user) {
+  try {
+    desktop.style.display = "block";
+    taskbar.style.display = "flex";
+
+    startMenu.innerHTML = `
+      <h3>${user.first} ${user.last}</h3>
+      <p>Welcome</p>
+    `;
+
+    window.toggleStart = () => {
+      startMenu.style.display =
+        startMenu.style.display === "block" ? "none" : "block";
+    };
+
+    window.createWindow = (title, html) => {
+      const w = document.createElement("div");
+      w.className = "window";
+      w.style.top = "90px";
+      w.style.left = "90px";
+      w.innerHTML = `<strong>${title}</strong><div>${html}</div>`;
+      desktop.appendChild(w);
+    };
+
+    window.openNotepad = () =>
+      createWindow("Notepad", "<textarea style='width:100%;height:150px'></textarea>");
+
+    window.openExplorer = () =>
+      createWindow("Explorer", `<p>Hello ${user.first}!</p>`);
+
+    window.openSettings = () =>
+      createWindow("Settings", "<p>Settings coming soon</p>");
+
+    setInterval(() => {
+      clock.textContent = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }, 1000);
+
+  } catch (e) {
+    showFail(e);
+  }
+}
+
+/* ================= FAIL SCREEN ================= */
+function showFail(err) {
+  const f = document.getElementById("bootFail");
+  f.style.display = "block";
+  f.textContent = "SYSTEM FAILURE\n\n" + err.stack;
+}
+</script>
+
+</body>
+</html>
